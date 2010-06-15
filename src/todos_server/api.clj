@@ -16,11 +16,15 @@
   [body]
   (read-json (slurp* body)))
 
-(defn guid [task]
-  (str "/tasks/" (:id task)))
+(defn task-path
+  "Returns the relative URL for task"
+  [task]
+  (str "/tasks/" (:_id task)))
 
-(defn with-guid [task]
-  (assoc task :guid (guid task)))
+(defn with-guid
+  "Associates task with :guid pointing to its relative URL"
+  [task]
+  (assoc task :guid (task-path task)))
 
 (defroutes main-routes
   (GET    "/tasks" []
@@ -32,7 +36,7 @@
   (POST   "/tasks" {body :body}
     (let [saved-task (add-task (parse-json body))]
       {:status 201
-       :headers {"Location" (guid saved-task)}}))
+       :headers {"Location" (task-path saved-task)}}))
   (PUT    "/tasks/:id" {body :body {id "id"} :route-params}
     (update-task id (parse-json body)))
   (DELETE "/tasks/:id" [id]

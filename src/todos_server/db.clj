@@ -1,38 +1,41 @@
 (ns todos-server.db
- (:use todos-server.util)
  (:use somnium.congomongo))
 
 (mongo! :db "todos")
 
-(defn- extern-id
-  "Returns a version of obj with a string :id based on its :_id"
-  [obj]
-  (-> obj
-      (assoc :id (str (:_id obj)))
-      (dissoc :_id)))
-
-(defn- intern-id
-  "Returns a version of obj with an ObjectId based on its :id"
-  [obj]
-  (-> obj
-      (assoc :_id (object-id (:id obj)))
-      (dissoc :id)))
-
 (defn find-all-tasks []
-  (map extern-id (fetch :tasks)))
+  (fetch :tasks))
 
 (defn find-task [id]
-  (extern-id (fetch-by-id :tasks id)))
+  (fetch-one :tasks :where {:_id id}))
+
+(defn- uuid []
+  (str (java.util.UUID/randomUUID)))
 
 (defn add-task [task]
-  (extern-id (insert! :tasks task)))
+  (insert! :tasks (assoc task :_id (uuid))))
+
+(defn- keywordify-keys
+  "Returns a map otherwise same as the argument but
+   with all keys turned to keywords"
+  [m]
+  (zipmap
+    (map keyword (keys m))
+    (vals m)))
+
+(defn- merge-with-kw-keys
+  "Merges maps converting all keys to keywords"
+  [& maps]
+  (reduce
+    merge
+    (map keywordify-keys maps)))
 
 (defn update-task [id task]
-  (let [task-in-db (fetch-by-id :tasks id)]
+  (let [task-in-db (find-task id)]
     (update! :tasks
       task-in-db
       (merge-with-kw-keys task-in-db task))))
 
 (defn destroy-task [id]
   (destroy! :tasks
-    (fetch-by-id :tasks id)))
+    (find-task id)))
